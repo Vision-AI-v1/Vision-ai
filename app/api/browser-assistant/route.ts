@@ -1,18 +1,40 @@
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY,
-  baseURL: "https://openrouter.ai/api/v1",
-});
+export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    const { question, page, pageTitle, pageUrl } = await req.json();
+    const apiKey = process.env.OPENROUTER_API_KEY;
+
+    if (!apiKey) {
+      console.error("OPENROUTER_API_KEY is missing");
+      return new Response(
+        "OpenRouter API key is not configured.",
+        {
+          status: 500,
+        }
+      );
+    }
+
+    const openai = new OpenAI({
+      apiKey,
+      baseURL: "https://openrouter.ai/api/v1",
+    });
+
+    const {
+      question,
+      page,
+      pageTitle,
+      pageUrl,
+    } = await req.json();
 
     if (!question) {
-      return new Response("Question is required", {
-        status: 400,
-      });
+      return new Response(
+        "Question is required.",
+        {
+          status: 400,
+        }
+      );
     }
 
     const prompt = `
@@ -33,6 +55,7 @@ USER REQUEST:
 ${question}
 
 Instructions:
+
 - Answer the user's request directly.
 - Use the webpage content when relevant.
 - Do not claim you performed an action if you did not.
@@ -60,13 +83,19 @@ Instructions:
             const text = chunk.choices[0]?.delta?.content;
 
             if (text) {
-              controller.enqueue(encoder.encode(text));
+              controller.enqueue(
+                encoder.encode(text)
+              );
             }
           }
 
           controller.close();
         } catch (error) {
-          console.error("Browser assistant stream error:", error);
+          console.error(
+            "Browser assistant stream error:",
+            error
+          );
+
           controller.error(error);
         }
       },
@@ -79,10 +108,16 @@ Instructions:
       },
     });
   } catch (error) {
-    console.error("Browser assistant error:", error);
+    console.error(
+      "Browser assistant error:",
+      error
+    );
 
-    return new Response("Vision AI could not answer.", {
-      status: 500,
-    });
+    return new Response(
+      "Vision AI could not answer.",
+      {
+        status: 500,
+      }
+    );
   }
 }
